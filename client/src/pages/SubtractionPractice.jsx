@@ -1,0 +1,181 @@
+import React, { useState, useRef } from "react";
+import useCatCongrats from "./useCatCongrats";
+import useCatUncongrats from "./useCatUncongrats";
+
+
+
+const LEVELS = {
+  easy:   { label: "קל (0–10)",     min: 0,  max: 10 },
+  medium: { label: "בינוני (0–50)", min: 0,  max: 50 },
+  hard:   { label: "קשה (0–200)",   min: 0,  max: 200 },
+};
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function makeQuestion(levelKey) {
+  const { min, max } = LEVELS[levelKey];
+  let a = randInt(min, max);
+  let b = randInt(min, max);
+
+  // ✅ אם יצא הפוך – מחליפים
+  if (a < b) [a, b] = [b, a];
+
+  return { a, b, ans: a - b };
+}
+
+
+const LEVEL_TEXT = {
+  easy: {
+    title: "רמה קלה 😺",
+    body:
+      "פה החתול לומד חיסור רגוע וברור.\n" +
+      "מתחילים מהמספר הגדול.\n" +
+      "את המספר השני הופכים לצעדים אחורה.\n" +
+      "סופרים לאט לאחור.\n" +
+      "דוגמה: 5 − 2 → 4, 3.\n" +
+      "טיפ של חתול: אם מחסרים 0 — הכל נשאר אותו דבר 😸",
+  },
+
+  medium: {
+    title: "רמה בינונית 🐾",
+    body:
+      "כאן החתול משתמש בטריק חכם של חיסור.\n" +
+      "במקום לספור הרבה צעדים אחורה,\n" +
+      "מחסרים קודם מספר קטן ונוח.\n" +
+      "מגיעים למספר עגול.\n" +
+      "ואז מחסרים את מה שנשאר.\n" +
+      "דוגמה: 34 − 6 → 30 ואז 28.\n" +
+      "טיפ של חתול: מספרים עגולים עושים חיסור קל 🐾",
+  },
+
+  hard: {
+    title: "רמה קשה 🐯",
+    body:
+      "זו רמה לחתולים שכבר שולטים בחיסור.\n" +
+      "כדי לא להתבלבל, מפרקים את המספר שמחסרים.\n" +
+      "קודם מחסרים עשרות.\n" +
+      "אחר כך מחסרים יחידות.\n" +
+      "בסוף בודקים שהכל הגיוני.\n" +
+      "דוגמה: 146 − 37 → 116 ואז 109.\n" +
+      "טיפ של חתול: לפרק זה סוד החישוב החכם 🧠",
+  },
+};
+
+
+
+
+
+
+export default function PracticeSubtraction() {
+  const { triggerCatFx, CatCongrats } = useCatCongrats(900);
+  const { triggerBadCatFx, CatUncongrats } = useCatUncongrats(900);
+  const timerRef = useRef(null);
+  const [level, setLevel] = useState("easy");
+  const [q, setQ] = useState(() => makeQuestion("easy"));
+  const [input, setInput] = useState("");
+  const [msg, setMsg] = useState("");
+
+  function checkAnswer() {
+    const val = Number(input);
+    if (input.trim() === "" || !Number.isFinite(val)) {
+      setMsg("הקלד מספר");
+      return;
+    }
+
+    if (val === q.ans) {
+      setMsg("✅ נכון");
+      triggerCatFx();
+
+      if (timerRef.current) clearTimeout(timerRef.current);
+
+      timerRef.current = setTimeout(() => {
+        setQ(makeQuestion(level));
+        setInput("");
+        setMsg("");
+      }, 1000);
+    } else {
+      triggerBadCatFx();
+      setMsg("❌ לא נכון");
+    }
+  }
+
+  function changeLevel(newLevel) {
+    setLevel(newLevel);
+    setQ(makeQuestion(newLevel));
+    setInput("");
+    setMsg("");
+  }
+
+return (
+    <div
+      style={{
+        fontFamily: "Arial",
+        maxWidth: 420,
+        margin: "40px auto",
+        direction: "rtl",
+        textAlign: "right",
+        position: "relative", 
+      }}
+    >
+      <CatCongrats />   
+      <CatUncongrats />
+
+      <h2>תרגול חיבור</h2>
+
+      <label style={{ display: "block", marginBottom: 8, fontWeight: 700 }}>
+        רמת קושי
+      </label>
+
+      <select
+  value={level}
+  onChange={(e) => changeLevel(e.target.value)}
+  className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-200"
+>
+     {Object.entries(LEVELS).map(([k, v]) => (
+     <option key={k} value={k}>
+      {v.label}
+    </option>
+     ))}
+    </select>
+
+      <div style={{ fontSize: 28, fontWeight: 800, margin: "16px 0" }}>
+         ? = {q.b} - {q.a} 
+      </div>
+
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="תשובה"
+        style={{ padding: 8, width: "100%", boxSizing: "border-box" }}
+      />
+
+      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <button onClick={checkAnswer}>בדוק</button>
+      </div>
+
+
+       <label style={{ display: "block", marginBottom: 8, fontWeight: 700 }}>
+        רמת קושי
+      </label>
+
+    {/* טקסט מתעדכן למטה */}
+<div className="mt-4 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+  <div className="flex items-center justify-between gap-3">
+    <p className="text-sm font-extrabold text-slate-900">
+      {LEVEL_TEXT[level]?.title ?? "הסבר לרמה"}
+    </p>
+    <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
+      {LEVELS[level]?.label}
+    </span>
+  </div>
+
+  <p className="mt-2 whitespace-pre-line text-sm leading-7 text-slate-700">
+  {LEVEL_TEXT[level]?.body ?? "בחר רמה כדי לראות הסבר."}
+</p>
+</div>
+
+    </div>
+  );
+}
