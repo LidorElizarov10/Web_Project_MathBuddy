@@ -4,10 +4,18 @@ import CheckTest1 from "./CheckTest1.jsx"; // Login
 import Register from "./pages/Register.jsx";
 import About from "./pages/About.jsx";
 
+import Start from "./pages/Start.jsx"; // ✅ הוספנו מסך בית
+
 import AdditionPractice from "./pages/AdditionPractice.jsx";
 import SubtractionPractice from "./pages/SubtractionPractice.jsx";
 import MultiplicationPractice from "./pages/MultiplicationPractice.jsx";
 import DivisionPractice from "./pages/DivisionPractice.jsx";
+
+// ✅ חדש: צ'אט RAG חתול
+import CatRagChat from "./pages/CatRagChat.jsx";
+
+// ✅ חדש: CatStory (מייצר סיפור ומחזיר ל-AdditionPractice)
+import CatStory from "./pages/CatStory.jsx";
 
 import { useEffect, useState } from "react";
 
@@ -55,9 +63,8 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-// ✅ חדש: אם כבר מחובר — לא נותנים להיכנס לכניסה/הרשמה
 function PublicOnlyRoute({ children }) {
-  if (isLoggedIn()) return <Navigate to="/addition" replace />;
+  if (isLoggedIn()) return <Navigate to="/start" replace />; // ✅ אם מחובר — לבית
   return children;
 }
 
@@ -98,14 +105,13 @@ export default function App() {
                   </div>
                   <div className="text-sm font-semibold text-slate-600">
                     {authed
-                      ? "בוחרים תרגול — ועושים נכון 🐾"
+                      ? "מתחילים בבית — ואז בוחרים תרגול 🐾"
                       : "קודם נכנסים / נרשמים — ואז מתחילים לתרגל 😺"}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* ✅ תפריט משתנה לפי התחברות */}
             {!authed ? (
               <nav className="flex flex-wrap gap-2">
                 <Tab to="/login" emoji="🔐">
@@ -120,6 +126,9 @@ export default function App() {
               </nav>
             ) : (
               <nav className="flex flex-wrap gap-2">
+                <Tab to="/start" emoji="🏠">
+                  בית
+                </Tab>
                 <Tab to="/addition" emoji="➕">
                   חיבור
                 </Tab>
@@ -132,6 +141,12 @@ export default function App() {
                 <Tab to="/division" emoji="➗">
                   חילוק
                 </Tab>
+
+                {/* ✅ חדש: צ'אט RAG */}
+                <Tab to="/cat-rag" emoji="💬">
+                  צ׳אט RAG
+                </Tab>
+
                 <Tab to="/about" emoji="ℹ️">
                   אודות
                 </Tab>
@@ -145,10 +160,10 @@ export default function App() {
             {/* ✅ דף ראשי: מפנה לפי מצב התחברות */}
             <Route
               path="/"
-              element={<Navigate to={authed ? "/addition" : "/login"} replace />}
+              element={<Navigate to={authed ? "/start" : "/login"} replace />}
             />
 
-            {/* ✅ דפים ציבוריים: אם כבר מחובר -> מעיף לתרגול */}
+            {/* ✅ דפים ציבוריים */}
             <Route
               path="/login"
               element={
@@ -167,7 +182,17 @@ export default function App() {
             />
             <Route path="/about" element={<About />} />
 
-            {/* ✅ דפים מוגנים: רק אחרי התחברות */}
+            {/* ✅ בית (מוגן) */}
+            <Route
+              path="/start"
+              element={
+                <ProtectedRoute>
+                  <Start />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ✅ תרגולים (מוגנים) */}
             <Route
               path="/addition"
               element={
@@ -201,6 +226,26 @@ export default function App() {
               }
             />
 
+            {/* ✅ חדש: CatStory (מוגן) — זה הנתיב שחסר לך */}
+            <Route
+              path="/cat-story"
+              element={
+                <ProtectedRoute>
+                  <CatStory />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ✅ חדש: צ'אט RAG (מוגן) */}
+            <Route
+              path="/cat-rag"
+              element={
+                <ProtectedRoute>
+                  <CatRagChat />
+                </ProtectedRoute>
+              }
+            />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
@@ -212,4 +257,3 @@ export default function App() {
     </div>
   );
 }
-

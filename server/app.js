@@ -7,47 +7,278 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const MONGO_URI = "mongodb+srv://mongoUser:737425503@cluster0.wxwcukg.mongodb.net/MorDB?appName=Cluster0";
+// ✅ לוג לכל בקשה (רק בשרת!)
+app.use((req, res, next) => {
+  console.log(req.method, req.url, req.body);
+  next();
+});
+// ✅ שים פה את הסיסמה החדשה האמיתית
+// טיפ: לפרויקט לימודי עדיף סיסמה רק אותיות+מספרים (בלי @ # % וכו')
+const MONGO_URI =
+  "mongodb+srv://mongoUser:mati1@cluster0.wxwcukg.mongodb.net/MorDB?retryWrites=true&w=majority";
+
+// ✅ לוגים ברורים לחיבור
+mongoose.connection.on("connected", () => console.log("✅ mongoose connected"));
+mongoose.connection.on("error", (e) => console.log("❌ mongoose error:", e.message));
+mongoose.connection.on("disconnected", () => console.log("⚠️ mongoose disconnected"));
 
 mongoose
   .connect(MONGO_URI)
   .then(() => console.log("Connected to Mongo Atlas ✅"))
-  .catch((err) => console.log("Mongo error:", err.message));
+  .catch((err) => console.log("Mongo connect error ❌:", err.message));
 
+
+// 🔹 החזרת סטטיסטיקות משתמש (לדף הבית)
+app.post("/user/stats", async (req, res) => {
+  try {
+    const { username } = req.body;
+
+    if (!username) {
+      return res.status(400).json({ ok: false, error: "NO_USERNAME" });
+    }
+
+    const user = await User.findOne({ username }).select(
+      "-password -__v"
+    );
+
+    if (!user) {
+      return res.status(404).json({ ok: false, error: "NO_USER" });
+    }
+
+    res.json({
+      ok: true,
+      user,
+    });
+  } catch (err) {
+    console.error("user/stats error:", err);
+    res.status(500).json({ ok: false, error: "SERVER_ERROR" });
+  }
+});
+
+
+// ✅ אמצעי הגנה: לא מריצים שאילתות אם אין חיבור
+function ensureDb(req, res) {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ error: "DB not connected" });
+  }
+  return null;
+}
+
+// בדיקת התחברות
 app.post("/check-login", async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const gate = ensureDb(req, res);
+    if (gate) return;
+
+    const { username, password } = req.body || {};
 
     if (!username || !password) {
       return res.status(400).json({ error: "חסר שם משתמש או סיסמה" });
     }
 
-    const user = await User.findOne({ username }).select("password");
+    const user = await User.findOne({ username }).select("password").lean();
 
-    if (!user) {
-      return res.json({ ok: false, reason: "NO_USER" }); // משתמש לא קיים
-    }
+    if (!user) return res.json({ ok: false, reason: "NO_USER" });
+    if (user.password !== password) return res.json({ ok: false, reason: "BAD_PASS" });
 
-    if (user.password !== password) {
-      return res.json({ ok: false, reason: "BAD_PASS" }); // סיסמה לא נכונה
-    }
-
-    return res.json({ ok: true }); // הצלחה
+    return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: err.message });
+  }
+});
+
+
+// מחזיר את הערכים 
+app.post("/user/stats", async (req, res) => {
+  try {
+    const { username } = req.body;
+    if (!username) return res.status(400).json({ ok: false, error: "NO_USERNAME" });
+
+    const user = await User.findOne({ username }).select(
+      "username addition subtraction multiplication division percent -_id"
+    );
+
+    if (!user) return res.status(404).json({ ok: false, error: "NO_USER" });
+
+    res.json({ ok: true, user });
+  } catch (err) {
+    console.error("user/stats error:", err);
+    res.status(500).json({ ok: false, error: "SERVER_ERROR" });
   }
 });
 
 // רישום משתמש
 app.post("/register", async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const gate = ensureDb(req, res);
+    if (gate) return;
+
+    const { username, password } = req.body || {};
+
+    if (!username || !password) {
+      return res.status(400).json({ success: false, error: "חסר שם משתמש או סיסמה" });
+    }
+
     const user = await User.create({ username, password });
-    res.json({ success: true, id: user._id });
+    return res.json({ success: true, id: user._id });
   } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
+    return res.status(400).json({ success: false, error: err.message });
   }
 });
+
+
+// addition
+app.post("/score/addition", async (req, res) => {
+  try {
+    console.log("BODY:", req.body); // ✅ כאן
+
+    const { username } = req.body;
+    if (!username) {
+      console.log("NO_USERNAME");
+      return res.status(400).json({ ok: false, error: "NO_USERNAME" });
+    }
+
+    console.log("INC FIELD:", "addition"); // ✅ כאן (לא חובה, רק לבדיקה)
+
+    const user = await User.findOneAndUpdate(
+      { username },
+      { $inc: { addition: 1 } },
+      { new: true, projection: { password: 0 } }
+    );
+
+    console.log("UPDATED USER:", user); // ✅ גם זה עוזר מאוד
+
+    if (!user) return res.status(404).json({ ok: false, error: "NO_USER" });
+
+    res.json({ ok: true, addition: user.addition });
+  } catch (e) {
+    console.log("ERR:", e);
+    res.status(500).json({ ok: false, error: "SERVER_ERROR" });
+  }
+});
+
+
+app.post("/score/multiplication", async (req, res) => {
+  try {
+    console.log("BODY:", req.body); // ✅ כאן
+
+    const { username } = req.body;
+    if (!username) {
+      console.log("NO_USERNAME");
+      return res.status(400).json({ ok: false, error: "NO_USERNAME" });
+    }
+
+    console.log("INC FIELD:", "multiplication"); // ✅ כאן (לא חובה)
+
+    const user = await User.findOneAndUpdate(
+      { username },
+      { $inc: { multiplication: 1 } },
+      { new: true, projection: { password: 0 } }
+    );
+
+    console.log("UPDATED USER:", user); // ✅ גם זה עוזר מאוד
+
+    if (!user) return res.status(404).json({ ok: false, error: "NO_USER" });
+
+    res.json({ ok: true, multiplication: user.multiplication });
+  } catch (e) {
+    console.log("ERR:", e);
+    res.status(500).json({ ok: false, error: "SERVER_ERROR" });
+  }
+});
+
+
+
+//subtraction
+app.post("/score/subtraction", async (req, res) => {
+  try {
+    console.log("BODY:", req.body);
+
+    const { username } = req.body;
+    if (!username) {
+      console.log("NO_USERNAME");
+      return res.status(400).json({ ok: false, error: "NO_USERNAME" });
+    }
+
+    console.log("INC FIELD:", "subtraction");
+
+    const user = await User.findOneAndUpdate(
+      { username },
+      { $inc: { subtraction: 1 } },
+      { new: true, projection: { password: 0 } }
+    );
+
+    console.log("UPDATED USER:", user);
+
+    if (!user) return res.status(404).json({ ok: false, error: "NO_USER" });
+
+    res.json({ ok: true, subtraction: user.subtraction });
+  } catch (e) {
+    console.log("ERR:", e);
+    res.status(500).json({ ok: false, error: "SERVER_ERROR" });
+  }
+});
+
+
+
+
+//devision
+app.post("/score/division", async (req, res) => {
+  try {
+    console.log("BODY:", req.body);
+
+    const { username } = req.body;
+    if (!username) {
+      console.log("NO_USERNAME");
+      return res.status(400).json({ ok: false, error: "NO_USERNAME" });
+    }
+
+    console.log("INC FIELD:", "division");
+
+    const user = await User.findOneAndUpdate(
+      { username },
+      { $inc: { division: 1 } },
+      { new: true, projection: { password: 0 } }
+    );
+
+    console.log("UPDATED USER:", user);
+
+    if (!user) return res.status(404).json({ ok: false, error: "NO_USER" });
+
+    res.json({ ok: true, division: user.division });
+  } catch (e) {
+    console.log("ERR:", e);
+    res.status(500).json({ ok: false, error: "SERVER_ERROR" });
+  }
+});
+
+// 🔹 החזרת סטטיסטיקות משתמש (לדף הבית)
+app.post("/user/stats", async (req, res) => {
+  try {
+    const { username } = req.body;
+
+    if (!username) {
+      return res.status(400).json({ ok: false, error: "NO_USERNAME" });
+    }
+
+    const user = await User.findOne({ username }).select(
+      "-password -__v"
+    );
+
+    if (!user) {
+      return res.status(404).json({ ok: false, error: "NO_USER" });
+    }
+
+    res.json({
+      ok: true,
+      user,
+    });
+  } catch (err) {
+    console.error("user/stats error:", err);
+    res.status(500).json({ ok: false, error: "SERVER_ERROR" });
+  }
+});
+
 
 app.listen(3000, () => {
   console.log("Server running on http://localhost:3000");
