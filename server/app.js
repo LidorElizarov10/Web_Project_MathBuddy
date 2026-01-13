@@ -24,14 +24,20 @@ mongoose.connection.on("error", (e) => console.log("❌ mongoose error:", e.mess
 mongoose.connection.on("disconnected", () => console.log("⚠️ mongoose disconnected"));
 
 mongoose
-  .connect(MONGO_URI)
+  .connect(MONGO_URI, {
+    serverSelectionTimeoutMS: 5000, // 5 seconds timeout
+    socketTimeoutMS: 45000, // 45 seconds socket timeout
+  })
   .then(() => console.log("Connected to Mongo Atlas ✅"))
   .catch((err) => console.log("Mongo connect error ❌:", err.message));
 
 function ensureDb(req, res) {
+  console.log("🔍 Connection readyState:", mongoose.connection.readyState);
   if (mongoose.connection.readyState !== 1) {
+    console.log("❌ DB not ready, readyState:", mongoose.connection.readyState);
     return res.status(503).json({ error: "DB not connected" });
   }
+  console.log("✅ DB connection is ready");
   return null;
 }
 
