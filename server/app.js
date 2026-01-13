@@ -76,22 +76,35 @@ api.post("/check-login", async (req, res) => {
 // 🔹 Register
 api.post("/register", async (req, res) => {
   try {
+    console.log("📝 Register attempt started");
     if (ensureDb(req, res)) return;
+    console.log("✅ DB connection verified");
+    
     const { username, password, age } = req.body || {};
     if (!username || !password || age === undefined) {
+      console.log("❌ Missing required fields");
       return res.status(400).json({ success: false, error: "חסר שם משתמש / סיסמה / גיל" });
     }
+    
     const ageNum = Number(age);
     if (!Number.isInteger(ageNum) || ageNum < 1 || ageNum > 12) {
+      console.log("❌ Invalid age:", ageNum);
       return res.status(400).json({ success: false, error: "גיל חייב להיות בין 1 ל-12" });
     }
+    
+    console.log("🔍 Checking if user exists:", username);
     const exists = await User.findOne({ username });
     if (exists) {
+      console.log("❌ User already exists:", username);
       return res.status(409).json({ success: false, error: "שם משתמש כבר קיים" });
     }
+    
+    console.log("💾 Creating new user:", username);
     const user = await User.create({ username, password, age: ageNum });
+    console.log("✅ User created successfully:", user._id);
     return res.json({ success: true, id: user._id });
   } catch (err) {
+    console.log("💥 Register error:", err.message);
     return res.status(400).json({ success: false, error: err.message });
   }
 });
